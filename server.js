@@ -13,6 +13,7 @@ import http from "http";
 import sgMail from '@sendgrid/mail'; // --- НОВОЕ: Импорт SendGrid (ESM) ---
 import path from "path";
 import { fileURLToPath } from 'url';
+import { google } from 'googleapis';
 
 dotenv.config();
 
@@ -493,6 +494,14 @@ const registrationSchema = z.object({
   preferredFood: z.string().optional(),
   feedback: z.string().optional(),
 });
+
+
+const GOOGLE_SHEET_ID = 'ВАШ_ID_ТАБЛИЦЫ_ИЗ_URL';
+const auth = new google.auth.GoogleAuth({
+  keyFile: 'creds.json', // Путь к вашему JSON ключу
+  scopes: 'https://www.googleapis.com/auth/spreadsheets',
+});
+
 
 async function generateUniqueDiscountCode() {
   const prefix = "RC10-";
@@ -2140,6 +2149,53 @@ app.use(express.static(path.join(__dirname, 'frontend/dist')));
 // Он перенаправляет все остальные запросы на твой index.html
 app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+});
+
+app.post('/api/export-to-sheets', async (req, res) => {
+  try {
+    const client = await auth.getClient();
+    const sheets = google.sheets({ version: 'v4', auth: client });
+
+    // 1. Получаем всех пользователей
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // 2. Форматируем их для таблицы
+    const dataForSheet = users.map(user => [
+      user.id,
+      user.firstName,
+      user.lastName,
+      user.email,
+      user.phone,
+      new Date(user.birthDate).toLocaleDateString('nl-NL'), // Формат даты
+      user.postalCode,
+      new Date(user.createdAt).toLocaleString('nl-NL'),
+    ]);
+
+    // 3. Добавляем заголовки
+    const header = [['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Birthday', 'Postal Code', 'Registered At']];
+
+    // 4. Очищаем старые данные и вставляем новые
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: GOOGLE_SHEET_ID,
+      range: 'Sheet1!A:H', // Укажите имя вашего листа
+    });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: GOOGLE_SHEET_ID,
+      range: 'Sheet1!A1', // Начать с ячейки A1
+      valueInputOption: 'USER_ENTERED',
+      resource: {
+        values: [...header, ...dataForSheet],
+      },
+    });
+
+    res.json({ success: true, message: 'Экспорт в Google Sheets выполнен!' });
+  } catch (error) {
+    console.error('Ошибка экспорта в Google Sheets:', error);
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
 });
 
 
