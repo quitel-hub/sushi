@@ -608,7 +608,7 @@ app.post("/api/register", async (req, res) => {
         const result = await sgMail.send(msg);
         console.log(`✅ Server: Письмо верификации успешно отправлено на ${customer.email}`);
         console.log(`   Status Code: ${result[0]?.statusCode || 'N/A'}`);
-      } catch (emailError: any) {
+      } catch (emailError) {
         console.error('\n❌ ОШИБКА отправки письма верификации:');
         console.error('   Email получателя:', customer.email);
         console.error('   Email отправителя:', sendgridFromEmail);
@@ -619,7 +619,7 @@ app.post("/api/register", async (req, res) => {
           console.error('   Детали ошибки SendGrid:', JSON.stringify(emailError.response.body, null, 2));
           // Проверяем типичные ошибки SendGrid
           if (emailError.response.body?.errors) {
-            emailError.response.body.errors.forEach((err: any, idx: number) => {
+            emailError.response.body.errors.forEach((err, idx) => {
               console.error(`   Ошибка ${idx + 1}:`, err.message);
               if (err.field) console.error(`      Поле: ${err.field}`);
               if (err.help) console.error(`      Помощь: ${err.help}`);
