@@ -10,7 +10,7 @@ import { UAParser } from "ua-parser-js";
 import geoip from "geoip-lite";
 import https from "https";
 import http from "http";
-import sgMail from '@sendgrid/mail'; // --- НОВОЕ: Импорт SendGrid (ESM) ---
+import sgMail from '@sendgrid/mail'; // -- НОВОЕ: Импорт SendGrid (ESM) --
 import path from "path";
 import { fileURLToPath } from 'url';
 import { google } from 'googleapis';
